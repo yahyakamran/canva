@@ -1,15 +1,32 @@
 const canvas = document.getElementById("canvas");
 const button = document.getElementById("next");
 const clear = document.getElementById("clear");
+const eraseBtn = document.getElementById("eraseBtn");
+const run = document.getElementById("run");
 
 const ctx = canvas.getContext("2d");
 
 canvas.width = 640;
 canvas.height = canvas.width;
 
-const ROWS = 32;
+const ROWS = 16;
 const COLS = ROWS;
 const CELL_WIDTH = canvas.width / COLS;
+let ERASE = false;
+let AnimationFrame;
+
+const BG_COLOR = "#f1f3f2"
+const BORDER_COLOR = "grey"
+const CELL_COLOR = "black"
+
+function sleep(milliseconds) {
+  var start = new Date().getTime();
+  for (var i = 0; i < 1e7; i++) {
+    if ((new Date().getTime() - start) > milliseconds){
+      break;
+    }
+  }
+}
 
 function generate_board(){
     let board = [];
@@ -107,22 +124,57 @@ function comp_next_board(curren_board){
 
 function render(){
     ctx.rect( 0 , 0 , canvas.width , canvas.height);
-    ctx.fillStyle = "grey";
+    ctx.fillStyle = BG_COLOR;
     ctx.fill();
 
+    for(let i = 0 ; i < ROWS ; ++i ){
+	for(let j = 0 ; j < COLS ; ++j ){
+	    ctx.lineWidth = 2;
+	    ctx.beginPath();
+	    ctx.strokeStyle = BORDER_COLOR
+	    ctx.moveTo(i*CELL_WIDTH , 0);
+	    ctx.lineTo(i*CELL_WIDTH , canvas.height);
+	    ctx.stroke();
+	    ctx.beginPath();
+	    ctx.strokeStyle = BORDER_COLOR
+	    ctx.moveTo(0 , j*CELL_WIDTH);
+	    ctx.lineTo(canvas.width , j*CELL_WIDTH );
+	    ctx.stroke();
+	}
+    }
+
     for(let i = 0 ; i < ROWS ; ++i){
-        for(let j = 0 ; j < ROWS ; ++j){
+        for(let j = 0 ; j < COLS ; ++j){
 	    if(current_board[i][j] === 1){
 	        let x = i*CELL_WIDTH;
 	        let y = j*CELL_WIDTH;
 	        ctx.beginPath();
     	        ctx.rect( x , y , CELL_WIDTH , CELL_WIDTH);
-    	        ctx.fillStyle = "red";
+    	        ctx.fillStyle = CELL_COLOR;
     	        ctx.fill();
     	    }
         }
     }
 }
+
+run.addEventListener("click",()=>{
+    let start , elapsed;
+    function frame(timestamp){
+	timestamp /= 1000;
+	if(start === undefined){
+	    start = timestamp;
+	}
+	elapsed = timestamp - start;
+	current_board = comp_next_board(current_board);
+    	render();
+	console.log("still running" , timestamp);
+	if(elapsed < 20){
+	    sleep(69 + 69);
+	    AnimationFrame = window.requestAnimationFrame(frame);
+	}
+    }
+    AnimationFrame = window.requestAnimationFrame(frame);
+});
 
 button.addEventListener("click",()=>{
     current_board = comp_next_board(current_board);
@@ -130,15 +182,25 @@ button.addEventListener("click",()=>{
 })
 
 clear.addEventListener("click",()=>{
+    window.cancelAnimationFrame(AnimationFrame);
     current_board = generate_board();
     render();
 })
 
 canvas.addEventListener("mousedown",(e)=>{
+    window.cancelAnimationFrame(AnimationFrame);
     let X = Math.floor(e.offsetX / CELL_WIDTH);
     let Y = Math.floor(e.offsetY / CELL_WIDTH);
-    current_board[X][Y] = 1;
+    if(ERASE){
+	current_board[X][Y] = 0;
+    }else{
+	current_board[X][Y] = 1;
+    }
     render();
 })
+
+eraseBtn.addEventListener('change',(e)=>{
+    ERASE = e.explicitOriginalTarget.checked;
+});
 
 render();
